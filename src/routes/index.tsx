@@ -15,6 +15,8 @@ import {
   Table2,
   LayoutGrid,
   Vibrate,
+  CreditCard,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomTabs, type TabId } from "@/components/BottomTabs";
