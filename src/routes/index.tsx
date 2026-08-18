@@ -306,15 +306,17 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     <div className="relative min-h-dvh pb-32">
       <TechBackground />
       <header className="sticky top-0 z-30 glass-panel border-x-0 border-t-0 px-5 py-3">
-        <div className="mx-auto flex max-w-md items-center justify-between">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-2">
           <span className="font-display text-lg font-extrabold tracking-tight">
             AirLeads <span className="text-primary">AI</span>
           </span>
-          <span className="rounded-full bg-primary/12 px-3 py-1.5 text-[11px] font-bold text-primary">
-            Automation live
-          </span>
+          <div className="flex items-center gap-2">
+            <PlanStatusPill billing={billing} onManage={() => setTab("plans")} />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
+
 
       <main className="mx-auto max-w-md space-y-5 px-5 pt-5">
         {tab === "dashboard" && (
