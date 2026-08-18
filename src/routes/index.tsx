@@ -507,15 +507,41 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           </>
         )}
 
+        {tab === "plans" && (
+          <PlansScreen
+            billing={billing}
+            onSubscribed={() => {
+              billing.refresh();
+              setTab("dashboard");
+            }}
+          />
+        )}
+
         {tab === "settings" && (
           <>
             <h1 className="text-[24px] font-extrabold">Settings</h1>
             <div className="card-soft divide-y divide-border">
-              <Row label="Appearance" value="Light" />
+              <Row label="Appearance" value={theme === "dark" ? "Dark" : "Light"} />
+              <div className="flex items-center justify-between px-4 py-4">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <CreditCard className="size-4 text-primary" /> Manage plan
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic.tap();
+                    setTab("plans");
+                  }}
+                  className="press flex items-center gap-1.5 rounded-full bg-primary/12 px-3 py-2 text-xs font-bold text-primary"
+                >
+                  {billing.plan ? `${billing.plan.name} · ${billing.remaining} left` : "Choose plan"}
+                </button>
+              </div>
               <Row label="Default country" value={config.country} />
               <Row label="Location" value={config.location || "Not set"} />
               <Row label="Leads per run" value="All leads found" />
               <Row label="Automation" value="Connected" />
+
               <div className="flex items-center justify-between px-4 py-4">
                 <span className="flex items-center gap-2 text-sm font-semibold">
                   <Vibrate className="size-4 text-primary" /> Vibration & haptics
