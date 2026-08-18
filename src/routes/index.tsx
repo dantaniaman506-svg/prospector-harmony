@@ -1,619 +1,605 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
-  Users,
-  ShieldCheck,
-  MailCheck,
+  ArrowRight,
   Target,
-  Sparkles,
-  LogOut,
-  Trash2,
-  Inbox,
-  Search,
+  ShieldCheck,
+  Zap,
   Download,
-  Table2,
-  LayoutGrid,
-  Vibrate,
-  CreditCard,
-
+  Search,
+  Sparkles,
+  Send,
+  Check,
+  Play,
+  Menu,
+  X,
+  Quote,
+  MapPin,
+  Building2,
+  Scissors,
+  Dumbbell,
+  Stethoscope,
+  Hammer,
+  ChevronDown,
 } from "lucide-react";
-import { toast } from "sonner";
-import { BottomTabs, type TabId } from "@/components/BottomTabs";
-import { GeneratePanel, DEFAULT_CONFIG, type GenerateConfig } from "@/components/GeneratePanel";
-import { LeadCard, type LeadStatus } from "@/components/LeadCard";
-import { LoginScreen } from "@/components/LoginScreen";
-import { Sparkline } from "@/components/Sparkline";
-import { LeadsTable } from "@/components/LeadsTable";
-import { TechBackground } from "@/components/TechBackground";
-import { PlanStatusPill } from "@/components/PlanStatusPill";
-import { PlansScreen } from "@/components/PlansScreen";
+import { BrandWord } from "@/components/Brand";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { generateLeads, type Lead } from "@/lib/airleads.functions";
-import { useBilling } from "@/lib/billing";
-import { useTheme } from "@/lib/theme";
-import { haptic, hapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
+import { TechBackground } from "@/components/TechBackground";
+import { Reveal } from "@/components/Reveal";
+import { DashboardMock } from "@/components/landing/DashboardMock";
+import { PLANS } from "@/lib/plans";
+import { readSession } from "@/lib/session";
+import { haptic } from "@/lib/haptics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "AirLeads AI — Find businesses without a website" },
+      { title: "AirLeads AI — Find Businesses Without a Website" },
       {
         name: "description",
         content:
-          "AirLeads AI Automation dashboard: generate verified business leads that have no website or an outdated one, with contact details in seconds.",
+          "AirLeads AI finds local businesses that need a website, verifies their phone and email, and exports ready-to-call leads in seconds.",
       },
-      { property: "og:title", content: "AirLeads AI — Find businesses without a website" },
+      { property: "og:title", content: "AirLeads AI — Find Businesses Without a Website" },
       {
         property: "og:description",
-        content: "Generate verified leads with owner name, phone, email and socials in one tap.",
+        content:
+          "Discover local businesses with no website, get verified contact details, and automate outreach from one dashboard.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: App,
+  component: Landing,
 });
 
-type Run = {
-  id: string;
-  at: string;
-  count: number;
-  country: string;
-  businessType: string;
-  filter: string;
-};
+const NAV_LINKS = [
+  ["Features", "#features"],
+  ["How It Works", "#how-it-works"],
+  ["Use Cases", "#use-cases"],
+  ["Pricing", "#pricing"],
+  ["Testimonials", "#testimonials"],
+  ["FAQ", "#faq"],
+] as const;
 
-function App() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
+const FEATURES = [
+  {
+    Icon: Target,
+    title: "No-website detection",
+    text: "The engine scans local listings and keeps only the businesses that have no website or an outdated one.",
+  },
+  {
+    Icon: ShieldCheck,
+    title: "Verified contacts",
+    text: "Owner name, working phone number, email and social profiles — checked before they reach your list.",
+  },
+  {
+    Icon: MapPin,
+    title: "Any city, any niche",
+    text: "Pick a country and city, or let random discovery mode surface untouched markets for you.",
+  },
+  {
+    Icon: Zap,
+    title: "Runs in under a minute",
+    text: "One tap starts the automation. Fresh leads land on your dashboard while you finish your coffee.",
+  },
+  {
+    Icon: Download,
+    title: "Instant CSV export",
+    text: "Export any run to CSV and drop it straight into your CRM, dialer or cold email tool.",
+  },
+  {
+    Icon: Send,
+    title: "Outreach ready",
+    text: "Call, WhatsApp or email a lead in one tap, and track it as open, contacted or closed.",
+  },
+];
+
+const STEPS = [
+  {
+    Icon: Search,
+    title: "Choose your market",
+    text: "Select country, city and business type — or let the engine pick a random untapped city.",
+  },
+  {
+    Icon: Sparkles,
+    title: "AI finds the gaps",
+    text: "The automation scans listings, filters out anyone who already has a website, and verifies contacts.",
+  },
+  {
+    Icon: Send,
+    title: "Close more deals",
+    text: "Work the list from your dashboard, mark status, export to CSV and follow up without losing anyone.",
+  },
+];
+
+const USE_CASES = [
+  { Icon: Building2, title: "Web agencies", text: "Sell websites to businesses that visibly need one." },
+  { Icon: Scissors, title: "Salons & spas", text: "Local service niches with almost zero online presence." },
+  { Icon: Stethoscope, title: "Clinics & dental", text: "High-ticket local clients who book by phone only." },
+  { Icon: Dumbbell, title: "Gyms & studios", text: "Fast-growing niche that still runs on Instagram DMs." },
+  { Icon: Hammer, title: "Trades & repair", text: "Plumbers, electricians and builders with no web page." },
+  { Icon: Target, title: "Freelancers", text: "Build a daily pipeline without cold scraping by hand." },
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      "I stopped scraping Maps by hand. Two runs a day and my calling list is full of businesses that actually need a site.",
+    name: "Rohit Sharma",
+    role: "Web design freelancer, Pune",
+  },
+  {
+    quote:
+      "The no-website filter is the whole product. Every lead is a real conversation instead of a cold guess.",
+    name: "Ayesha Khan",
+    role: "Founder, Nova Studio",
+  },
+  {
+    quote:
+      "We closed four retainers in the first month. Verified phone numbers made the difference for our callers.",
+    name: "Daniel Mensah",
+    role: "Agency owner, Dubai",
+  },
+];
+
+const FAQS = [
+  {
+    q: "How does AirLeads know a business has no website?",
+    a: "Every listing is checked for a live website field and a reachable page. Businesses with a working site are dropped before the list ever reaches you.",
+  },
+  {
+    q: "Which countries and cities are supported?",
+    a: "You can target any supported country and pick a state or city inside it. Random discovery mode picks an untapped city for you automatically.",
+  },
+  {
+    q: "How many leads do I get per day?",
+    a: "It depends on your plan. Daily credits reset at midnight, and your dashboard always shows how many you have left.",
+  },
+  {
+    q: "Can I export the leads?",
+    a: "Yes — any run can be exported to CSV with name, category, phone, email, address, rating and the Google Maps link.",
+  },
+  {
+    q: "Do I need to create an account?",
+    a: "No sign-up flow. AirLeads is invite-only: you log in with the credentials issued for your account.",
+  },
+];
+
+const LOGOS = ["taskflo", "GrowthSpark", "PitchPilot", "LeadBoost", "SalesRobot"];
+
+function Landing() {
+  const navigate = useNavigate();
+  const [menu, setMenu] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    setAuthed(window.localStorage.getItem("airleads-session") === "persist");
+    setAuthed(readSession());
   }, []);
 
-  if (authed === null) return <div className="min-h-dvh bg-background" />;
-  if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
-  return <Dashboard onSignOut={() => setAuthed(false)} />;
-}
-
-function Dashboard({ onSignOut }: { onSignOut: () => void }) {
-  const run = useServerFn(generateLeads);
-  const billing = useBilling();
-  const { theme } = useTheme();
-  const [tab, setTab] = useState<TabId>("dashboard");
-  const [config, setConfig] = useState<GenerateConfig>(DEFAULT_CONFIG);
-  const [loading, setLoading] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [statuses, setStatuses] = useState<Record<string, LeadStatus>>({});
-  const [savedIds, setSavedIds] = useState<string[]>([]);
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [query, setQuery] = useState("");
-  const [view, setView] = useState<"table" | "cards">("table");
-  const [buzz, setBuzz] = useState(true);
-
-  useEffect(() => {
-    setBuzz(hapticsEnabled());
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("airleads-state");
-      if (raw) {
-        const s = JSON.parse(raw) as {
-          leads?: Lead[];
-          statuses?: Record<string, LeadStatus>;
-          savedIds?: string[];
-          runs?: Run[];
-        };
-        setLeads(s.leads ?? []);
-        setStatuses(s.statuses ?? {});
-        setSavedIds(s.savedIds ?? []);
-        setRuns(s.runs ?? []);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(
-      "airleads-state",
-      JSON.stringify({ leads, statuses, savedIds, runs }),
-    );
-  }, [leads, statuses, savedIds, runs]);
-
-  const stats = useMemo(() => {
-    const withPhone = leads.filter((l) => l.phone).length;
-    const withEmail = leads.filter((l) => l.email).length;
-    const closed = Object.values(statuses).filter((s) => s === "closed").length;
-    const rate = leads.length ? Math.round((closed / leads.length) * 1000) / 10 : 0;
-    const total = leads.length;
-
-    // Growth curve built from real run history (oldest -> newest), 0 = flat line.
-    const chronological = [...runs].reverse();
-    const growth = (scale: number) => {
-      if (chronological.length === 0) return [0, 0, 0, 0, 0, 0];
-      let acc = 0;
-      const pts = chronological.map((r) => {
-        acc += r.count * scale;
-        return Math.round(acc);
-      });
-      return [0, ...pts];
-    };
-    const ratio = total ? 1 : 0;
-
-    return [
-      { label: "Leads Found", value: total, Icon: Users, series: growth(1) },
-      {
-        label: "Verified Leads",
-        value: withPhone,
-        Icon: ShieldCheck,
-        series: growth(total ? (withPhone / total) * ratio : 0),
-      },
-      {
-        label: "Emails Found",
-        value: withEmail,
-        Icon: MailCheck,
-        series: growth(total ? (withEmail / total) * ratio : 0),
-      },
-      {
-        label: "Closed Rate",
-        value: `${rate}%`,
-        Icon: Target,
-        series: growth(total ? (closed / total) * ratio : 0),
-      },
-    ];
-  }, [leads, runs, statuses]);
-
-  async function handleGenerate() {
-    const random = config.mode === "random";
-
-    if (!random && !config.location.trim()) {
-      haptic.error();
-      toast.error("Choose a state or city first", {
-        description: "The automation needs a location to search in.",
-      });
-      return;
-    }
-
-    // ---- Credit checks (plan required, daily limit enforced) ----
-    if (!billing.plan) {
-      haptic.error();
-      toast.error("No active plan", {
-        description: "Subscribe to a plan to start generating leads.",
-        action: { label: "See plans", onClick: () => setTab("plans") },
-      });
-      setTab("plans");
-      return;
-    }
-    if (billing.remaining <= 0) {
-      haptic.error();
-      toast.error("Today's lead credits are used up", {
-        description: `Your ${billing.plan.name} plan gives ${billing.limit} leads a day. Credits reset at midnight.`,
-        action: { label: "Upgrade", onClick: () => setTab("plans") },
-      });
-      return;
-    }
-
-    const allowance = billing.remaining;
-    const area = random ? `random city in ${config.country}` : `${config.location}, ${config.country}`;
-
-    setLoading(true);
-    const toastId = toast.loading("Finding businesses without a website…", {
-      description: `${config.businessType} · ${area}. This can take 30–60 seconds.`,
-    });
-
-    let res: Awaited<ReturnType<typeof run>>;
-    try {
-      res = await run({
-        data: {
-          country: config.country,
-          location: random ? "" : config.location.trim(),
-          businessType: config.businessType,
-          mode: config.mode,
-        },
-      });
-    } catch {
-      setLoading(false);
-      haptic.error();
-      toast.error("Couldn't reach the lead engine", {
-        id: toastId,
-        description: "Check your internet connection and try again.",
-      });
-      return;
-    }
-    setLoading(false);
-
-    if (!res.ok || res.leads.length === 0) {
-      haptic.error();
-      toast.error("No leads generated", {
-        id: toastId,
-        description: res.message || "Try another city or business type.",
-      });
-      return;
-    }
-
-    // Never hand over more leads than the plan still allows today.
-    const delivered = res.leads.slice(0, allowance);
-    const trimmed = res.leads.length - delivered.length;
-    const where = res.ok && res.location ? res.location : config.location;
-
-    haptic.success();
-    setLeads(delivered);
-    billing.consumeCredit(delivered.length);
-    setTab("leads");
-    toast.success(`${delivered.length} leads found`, {
-      id: toastId,
-      description: trimmed
-        ? `${config.businessType} in ${where} — ${trimmed} more were held back because today's credits ran out.`
-        : `${config.businessType} in ${where} — all without a website.`,
-    });
-    setRuns((r) =>
-      [
-        {
-          id: `run-${Date.now()}`,
-          at: new Date().toISOString(),
-          count: delivered.length,
-          country: `${where}, ${config.country}`,
-          businessType: config.businessType,
-          filter: random ? "Random · No Website" : "No Website",
-        },
-        ...r,
-      ].slice(0, 30),
-    );
-  }
-
-  const savedLeads = leads.filter((l) => savedIds.includes(l.id));
-
-  const visibleLeads = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return leads;
-    return leads.filter((l) =>
-      [l.businessName, l.phone, l.email, l.address, l.category, l.city, l.country]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [leads, query]);
-
-  function exportCsv(rows: Lead[]) {
-    if (!rows.length) return;
-    haptic.tap();
-    const cols = [
-      "businessName",
-      "category",
-      "phone",
-      "email",
-      "address",
-      "city",
-      "country",
-      "rating",
-      "reviewsCount",
-      "googleMapsUrl",
-    ] as const;
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join(
-      "\n",
-    );
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `airleads-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("CSV exported");
-  }
+  const cta = authed ? "Open Dashboard" : "Get Started Free";
 
   return (
-    <div className="relative min-h-dvh pb-32">
+    <div className="relative min-h-dvh overflow-x-hidden">
       <TechBackground />
-      <header className="sticky top-0 z-30 glass-panel border-x-0 border-t-0 px-5 py-3">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-2">
-          <span className="font-display text-lg font-extrabold tracking-tight">
-            AirLeads <span className="text-primary">AI</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <PlanStatusPill billing={billing} onManage={() => setTab("plans")} />
+
+      {/* ---------- Nav ---------- */}
+      <header className="sticky top-0 z-40 glass-panel border-x-0 border-t-0">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-5 py-3 lg:px-8">
+          <Link to="/" className="press shrink-0">
+            <BrandWord />
+          </Link>
+
+          <nav className="mx-auto hidden items-center gap-1 lg:flex">
+            {NAV_LINKS.map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                className="rounded-full px-3.5 py-2 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <ThemeToggle />
+            <Link
+              to="/login"
+              className="press hidden rounded-full px-4 py-2 text-[13px] font-bold text-muted-foreground transition-colors hover:text-foreground sm:block"
+            >
+              Log in
+            </Link>
+            <Link
+              to={authed ? "/app" : "/login"}
+              onClick={() => haptic.tap()}
+              className="btn-glow hidden items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold sm:flex"
+            >
+              {cta} <ArrowRight className="size-4" />
+            </Link>
+            <button
+              type="button"
+              aria-label="Menu"
+              onClick={() => setMenu((m) => !m)}
+              className="press grid size-9 place-items-center rounded-full border border-border bg-secondary/70 lg:hidden"
+            >
+              {menu ? <X className="size-4.5" /> : <Menu className="size-4.5" />}
+            </button>
           </div>
         </div>
+
+        {menu && (
+          <div className="animate-in fade-in slide-in-from-top-2 border-t border-border px-5 pb-5 pt-2 duration-200 lg:hidden">
+            <nav className="grid gap-1">
+              {NAV_LINKS.map(([label, href]) => (
+                <a
+                  key={href}
+                  href={href}
+                  onClick={() => setMenu(false)}
+                  className="rounded-xl px-3 py-3 text-sm font-semibold text-muted-foreground"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+            <Link
+              to={authed ? "/app" : "/login"}
+              className="btn-glow mt-2 flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold"
+            >
+              {cta} <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        )}
       </header>
 
+      {/* ---------- Hero ---------- */}
+      <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-8 pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:px-8 lg:pt-24">
+        <div>
+          <Reveal>
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-2 text-[12px] font-bold text-primary">
+              <Sparkles className="size-3.5" /> AI-Powered Lead Generation
+            </span>
+          </Reveal>
 
-      <main className="mx-auto max-w-md space-y-5 px-5 pt-5">
-        {tab === "dashboard" && (
-          <>
-            <div>
-              <h1 className="text-[26px] font-extrabold leading-tight">
-                Welcome back <span className="text-gradient">👋</span>
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Let&apos;s find businesses that still need a website.
-              </p>
-            </div>
+          <Reveal delay={80}>
+            <h1 className="mt-6 text-[40px] font-extrabold leading-[1.03] tracking-tight sm:text-6xl lg:text-[68px]">
+              Find Businesses.
+              <br />
+              Close <span className="text-gradient">More Deals.</span>
+            </h1>
+          </Reveal>
 
-            <div className="grid grid-cols-2 gap-3">
-              {stats.map(({ label, value, Icon, series }) => (
-                <div key={label} className="card-soft overflow-hidden p-4">
-                  <span className="grid size-9 place-items-center rounded-xl bg-primary/12">
-                    <Icon className="size-4.5 text-primary" />
-                  </span>
-                  <p className="mt-3 text-xs font-semibold text-muted-foreground">{label}</p>
-                  <p className="text-[22px] font-extrabold leading-tight">{value}</p>
-                  <Sparkline data={series} className="mt-2 h-8 w-full text-primary" />
-                </div>
-              ))}
-            </div>
+          <Reveal delay={160}>
+            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-lg">
+              AirLeads AI helps you discover local businesses that need a website, get verified
+              contact details, and automate your outreach — all in one powerful platform.
+            </p>
+          </Reveal>
 
-            <GeneratePanel
-              config={config}
-              setConfig={setConfig}
-              onGenerate={handleGenerate}
-              loading={loading}
-            />
-          </>
-        )}
-
-        {tab === "leads" && (
-          <>
-            <div className="flex items-end justify-between">
-              <div>
-                <h1 className="text-[24px] font-extrabold">Your Leads</h1>
-                <p className="text-sm text-muted-foreground">
-                  {visibleLeads.length} of {leads.length} businesses
-                </p>
-              </div>
-              {leads.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label="Export CSV"
-                    onClick={() => exportCsv(visibleLeads)}
-                    className="press rounded-full bg-secondary p-2.5 text-muted-foreground"
-                  >
-                    <Download className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Toggle view"
-                    onClick={() => {
-                      haptic.select();
-                      setView((v) => (v === "table" ? "cards" : "table"));
-                    }}
-                    className="press rounded-full bg-secondary p-2.5 text-muted-foreground"
-                  >
-                    {view === "table" ? (
-                      <LayoutGrid className="size-4" />
-                    ) : (
-                      <Table2 className="size-4" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Clear leads"
-                    onClick={() => {
-                      haptic.tap();
-                      setLeads([]);
-                      setStatuses({});
-                      setSavedIds([]);
-                      toast.success("Leads cleared");
-                    }}
-                    className="press rounded-full bg-secondary p-2.5 text-muted-foreground"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {leads.length > 0 && (
-              <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 focus-within:border-primary">
-                <Search className="size-4 shrink-0 text-primary" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search business, owner, phone, email…"
-                  className="w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                />
-              </div>
-            )}
-            {leads.length === 0 ? (
-              <EmptyState
-                title="No leads yet"
-                text="Head to the dashboard and hit Generate Leads to fill this list."
-              />
-            ) : view === "table" ? (
-              <LeadsTable
-                leads={visibleLeads}
-                statuses={statuses}
-                onStatusChange={(id, s) => setStatuses((prev) => ({ ...prev, [id]: s }))}
-              />
-            ) : (
-              <div className="space-y-3">
-                {visibleLeads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    status={statuses[lead.id] ?? "open"}
-                    saved={savedIds.includes(lead.id)}
-                    onStatusChange={(s) => setStatuses((prev) => ({ ...prev, [lead.id]: s }))}
-                    onToggleSave={() =>
-                      setSavedIds((prev) =>
-                        prev.includes(lead.id)
-                          ? prev.filter((i) => i !== lead.id)
-                          : [...prev, lead.id],
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "history" && (
-          <>
-            <h1 className="text-[24px] font-extrabold">History</h1>
-            {runs.length === 0 ? (
-              <EmptyState
-                title="No runs yet"
-                text="Every generation you make will be logged here."
-              />
-            ) : (
-              <div className="space-y-3">
-                {runs.map((r) => (
-                  <div key={r.id} className="card-soft flex items-center gap-3 p-4">
-                    <span className="grid size-10 place-items-center rounded-xl bg-primary/12">
-                      <Sparkles className="size-5 text-primary" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-bold">
-                        {r.businessType} · {r.country}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.filter} · {new Date(r.at).toLocaleString()}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-primary/12 px-3 py-1 text-xs font-bold text-primary">
-                      {r.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "saved" && (
-          <>
-            <h1 className="text-[24px] font-extrabold">Saved</h1>
-            {savedLeads.length === 0 ? (
-              <EmptyState
-                title="Nothing saved"
-                text="Tap the bookmark on any lead to keep it here."
-              />
-            ) : (
-              <div className="space-y-3">
-                {savedLeads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    status={statuses[lead.id] ?? "open"}
-                    saved
-                    onStatusChange={(s) => setStatuses((prev) => ({ ...prev, [lead.id]: s }))}
-                    onToggleSave={() => setSavedIds((prev) => prev.filter((i) => i !== lead.id))}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "plans" && (
-          <PlansScreen
-            billing={billing}
-            onSubscribed={() => {
-              billing.refresh();
-              setTab("dashboard");
-            }}
-          />
-        )}
-
-        {tab === "settings" && (
-          <>
-            <h1 className="text-[24px] font-extrabold">Settings</h1>
-            <div className="card-soft divide-y divide-border">
-              <Row label="Appearance" value={theme === "dark" ? "Dark" : "Light"} />
-              <div className="flex items-center justify-between px-4 py-4">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  <CreditCard className="size-4 text-primary" /> Manage plan
+          <Reveal delay={240}>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                to={authed ? "/app" : "/login"}
+                onClick={() => haptic.tap()}
+                className="btn-glow flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-[15px] font-bold"
+              >
+                Start Generating Leads <ArrowRight className="size-5" />
+              </Link>
+              <a
+                href="#how-it-works"
+                className="press flex items-center justify-center gap-2.5 rounded-2xl border border-border bg-card px-6 py-4 text-[15px] font-bold shadow-[var(--shadow-soft)]"
+              >
+                <span className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground">
+                  <Play className="size-3.5 fill-current" />
                 </span>
+                Watch Demo
+              </a>
+            </div>
+          </Reveal>
+
+          <Reveal delay={320}>
+            <ul className="mt-10 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+              {[
+                [Target, "Find leads with", "no website"],
+                [ShieldCheck, "Verified emails", "and phones"],
+                [Zap, "Automated", "and fast"],
+                [Download, "Export leads", "instantly"],
+              ].map(([Icon, a, b]) => {
+                const I = Icon as typeof Target;
+                return (
+                  <li key={a as string} className="flex items-start gap-2.5">
+                    <I className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <span className="text-[12.5px] leading-snug text-muted-foreground">
+                      {a as string}
+                      <br />
+                      <span className="font-bold text-foreground">{b as string}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Reveal>
+        </div>
+
+        <Reveal delay={120} className="lg:pl-4">
+          <div className="relative">
+            <div className="absolute -inset-6 -z-10 rounded-[40px] bg-primary/10 blur-3xl" />
+            <DashboardMock />
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ---------- Logos ---------- */}
+      <section className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+        <Reveal>
+          <p className="text-center text-[13px] font-semibold text-muted-foreground">
+            Trusted by marketers, agencies &amp; sales teams
+          </p>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 sm:gap-x-16">
+            {LOGOS.map((l) => (
+              <span
+                key={l}
+                className="font-display text-lg font-extrabold text-muted-foreground/70 transition-colors hover:text-foreground sm:text-2xl"
+              >
+                {l}
+              </span>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ---------- Features ---------- */}
+      <Section
+        id="features"
+        eyebrow="Features"
+        title="Everything you need to fill your pipeline"
+        text="A focused toolkit built for one job: finding local businesses that still need a website, and getting you in front of them first."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(({ Icon, title, text }, i) => (
+            <Reveal key={title} delay={i * 70}>
+              <div className="card-soft group h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-glow)]">
+                <span className="grid size-11 place-items-center rounded-2xl bg-primary/12 transition-transform duration-300 group-hover:scale-110">
+                  <Icon className="size-5 text-primary" />
+                </span>
+                <p className="mt-4 text-[17px] font-extrabold">{title}</p>
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* ---------- How it works ---------- */}
+      <Section
+        id="how-it-works"
+        eyebrow="How It Works"
+        title="Three steps from idea to closed deal"
+        text="No setup, no scraping scripts, no spreadsheets. Log in and run the automation."
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          {STEPS.map(({ Icon, title, text }, i) => (
+            <Reveal key={title} delay={i * 110}>
+              <div className="card-soft relative h-full overflow-hidden p-7">
+                <span className="absolute right-5 top-4 font-display text-6xl font-extrabold text-primary/10">
+                  {i + 1}
+                </span>
+                <span className="grid size-12 place-items-center rounded-2xl bg-primary/12">
+                  <Icon className="size-5.5 text-primary" />
+                </span>
+                <p className="mt-5 text-[18px] font-extrabold">{title}</p>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">{text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* ---------- Use cases ---------- */}
+      <Section
+        id="use-cases"
+        eyebrow="Use Cases"
+        title="Built for the people who sell websites"
+        text="Agencies, freelancers and sales teams use AirLeads to open conversations in local markets every single day."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {USE_CASES.map(({ Icon, title, text }, i) => (
+            <Reveal key={title} delay={i * 60}>
+              <div className="glass-panel flex h-full items-start gap-4 rounded-3xl p-5 transition-transform duration-300 hover:-translate-y-1">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12">
+                  <Icon className="size-4.5 text-primary" />
+                </span>
+                <span>
+                  <span className="block text-[15px] font-extrabold">{title}</span>
+                  <span className="mt-1 block text-[13px] text-muted-foreground">{text}</span>
+                </span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* ---------- Pricing ---------- */}
+      <Section
+        id="pricing"
+        eyebrow="Pricing"
+        title="Simple plans, daily fresh leads"
+        text="Every plan gives you daily lead credits that reset at midnight. Upgrade or change anytime from your dashboard."
+      >
+        <div className="grid gap-5 lg:grid-cols-3">
+          {PLANS.map((p, i) => (
+            <Reveal key={p.id} delay={i * 90}>
+              <div
+                className={`relative flex h-full flex-col rounded-3xl p-7 transition-transform duration-300 hover:-translate-y-1.5 ${
+                  p.popular
+                    ? "border-2 border-primary bg-card shadow-[var(--shadow-glow)]"
+                    : "card-soft"
+                }`}
+              >
+                {p.popular && (
+                  <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-primary-foreground">
+                    Most popular
+                  </span>
+                )}
+                <p className="text-[15px] font-extrabold">{p.name}</p>
+                <p className="mt-2 flex items-end gap-1">
+                  <span className="font-display text-4xl font-extrabold">₹{p.price}</span>
+                  <span className="pb-1 text-[13px] text-muted-foreground">/month</span>
+                </p>
+                <p className="mt-2 text-[13px] font-bold text-primary">
+                  {p.credits} fresh leads every day
+                </p>
+                <ul className="mt-5 flex-1 space-y-2.5">
+                  {p.perks.map((perk) => (
+                    <li key={perk} className="flex items-start gap-2.5 text-[13.5px]">
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span className="text-muted-foreground">{perk}</span>
+                    </li>
+                  ))}
+                </ul>
                 <button
                   type="button"
                   onClick={() => {
                     haptic.tap();
-                    setTab("plans");
+                    navigate({ to: authed ? "/app" : "/login" });
                   }}
-                  className="press flex items-center gap-1.5 rounded-full bg-primary/12 px-3 py-2 text-xs font-bold text-primary"
+                  className={`mt-6 rounded-2xl py-3.5 text-[14px] font-bold ${
+                    p.popular ? "btn-glow" : "press border border-border bg-secondary"
+                  }`}
                 >
-                  {billing.plan ? `${billing.plan.name} · ${billing.remaining} left` : "Choose plan"}
+                  Choose {p.name}
                 </button>
               </div>
-              <Row label="Default country" value={config.country} />
-              <Row label="Location" value={config.location || "Not set"} />
-              <Row label="Leads per run" value="All leads found" />
-              <Row label="Automation" value="Connected" />
+            </Reveal>
+          ))}
+        </div>
+      </Section>
 
-              <div className="flex items-center justify-between px-4 py-4">
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  <Vibrate className="size-4 text-primary" /> Vibration & haptics
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={buzz}
-                  aria-label="Toggle vibration"
-                  onClick={() => {
-                    const next = !buzz;
-                    setHapticsEnabled(next);
-                    setBuzz(next);
-                    if (next) haptic.success();
-                  }}
-                  className={`press relative h-7 w-12 rounded-full transition-colors ${buzz ? "bg-primary" : "bg-secondary"}`}
-                >
-                  <span
-                    className={`absolute top-1 size-5 rounded-full bg-background transition-all ${buzz ? "left-6" : "left-1"}`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center justify-between px-4 py-4">
-                <span className="text-sm font-semibold">Export all leads</span>
-                <button
-                  type="button"
-                  onClick={() => exportCsv(leads)}
-                  className="press flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-bold"
-                >
-                  <Download className="size-3.5" /> CSV
-                </button>
-              </div>
+      {/* ---------- Testimonials ---------- */}
+      <Section
+        id="testimonials"
+        eyebrow="Testimonials"
+        title="Teams closing deals with AirLeads"
+        text="Real operators using the same automation you get on day one."
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          {TESTIMONIALS.map((t, i) => (
+            <Reveal key={t.name} delay={i * 90}>
+              <figure className="card-soft flex h-full flex-col p-6">
+                <Quote className="size-6 text-primary/40" />
+                <blockquote className="mt-3 flex-1 text-[14px] leading-relaxed">
+                  “{t.quote}”
+                </blockquote>
+                <figcaption className="mt-5 flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-full bg-primary/12 text-[13px] font-extrabold text-primary">
+                    {t.name.slice(0, 1)}
+                  </span>
+                  <span>
+                    <span className="block text-[13.5px] font-extrabold">{t.name}</span>
+                    <span className="block text-[12px] text-muted-foreground">{t.role}</span>
+                  </span>
+                </figcaption>
+              </figure>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* ---------- FAQ ---------- */}
+      <Section
+        id="faq"
+        eyebrow="FAQ"
+        title="Questions, answered"
+        text="Still unsure? Everything you need to know before your first run."
+      >
+        <div className="mx-auto max-w-3xl space-y-3">
+          {FAQS.map((f, i) => (
+            <Reveal key={f.q} delay={i * 60}>
+              <details className="card-soft group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 text-[14.5px] font-bold">
+                  {f.q}
+                  <ChevronDown className="size-4.5 shrink-0 text-primary transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">{f.a}</p>
+              </details>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* ---------- CTA ---------- */}
+      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-14 text-center shadow-[var(--shadow-soft)] sm:px-14">
+            <div className="absolute -left-20 -top-24 size-72 rounded-full bg-primary/20 blur-3xl" />
+            <div className="relative">
+              <h2 className="text-3xl font-extrabold sm:text-4xl">
+                Your next client doesn&apos;t have a website yet.
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-[14.5px] text-muted-foreground">
+                Log in and run the automation — verified leads in under a minute.
+              </p>
+              <Link
+                to={authed ? "/app" : "/login"}
+                onClick={() => haptic.tap()}
+                className="btn-glow mt-8 inline-flex items-center gap-2 rounded-2xl px-8 py-4 text-[15px] font-bold"
+              >
+                {cta} <ArrowRight className="size-5" />
+              </Link>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                haptic.tap();
-                window.localStorage.removeItem("airleads-session");
-                onSignOut();
-              }}
-              className="press flex w-full items-center justify-center gap-2 rounded-full border-2 border-destructive/40 py-4 text-sm font-bold text-destructive"
-            >
-              <LogOut className="size-4" /> Log out
-            </button>
-          </>
-        )}
-      </main>
+          </div>
+        </Reveal>
+      </section>
 
-      <BottomTabs active={tab} onChange={setTab} />
+      {/* ---------- Footer ---------- */}
+      <footer className="border-t border-border px-5 py-10 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 sm:flex-row sm:justify-between">
+          <BrandWord />
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {NAV_LINKS.map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                className="text-[12.5px] font-semibold text-muted-foreground hover:text-foreground"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+          <p className="text-[12px] text-muted-foreground">
+            © {new Date().getFullYear()} AirLeads AI
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Section({
+  id,
+  eyebrow,
+  title,
+  text,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  text: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between px-4 py-4">
-      <span className="text-sm font-semibold">{label}</span>
-      <span className="text-sm text-muted-foreground">{value}</span>
-    </div>
-  );
-}
-
-function EmptyState({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="card-soft flex flex-col items-center gap-2 px-6 py-14 text-center">
-      <span className="grid size-14 place-items-center rounded-2xl bg-primary/12">
-        <Inbox className="size-6 text-primary" />
-      </span>
-      <p className="mt-2 text-[17px] font-bold">{title}</p>
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
+    <section id={id} className="mx-auto max-w-7xl scroll-mt-24 px-5 py-16 lg:px-8 lg:py-24">
+      <Reveal>
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-primary">
+            {eyebrow}
+          </span>
+          <h2 className="mt-3 text-3xl font-extrabold leading-tight sm:text-4xl">{title}</h2>
+          <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{text}</p>
+        </div>
+      </Reveal>
+      <div className="mt-12">{children}</div>
+    </section>
   );
 }
