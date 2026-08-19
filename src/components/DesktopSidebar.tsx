@@ -1,6 +1,6 @@
 import { Home, Search, History, Bookmark, Settings, CreditCard, LogOut } from "lucide-react";
 import { haptic } from "@/lib/haptics";
-import { Brand } from "@/components/Brand";
+import { BrandWord } from "@/components/Brand";
 import type { TabId } from "@/components/BottomTabs";
 
 const ITEMS: { id: TabId; label: string; Icon: typeof Home }[] = [
@@ -24,7 +24,7 @@ export function DesktopSidebar({
 }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-card/70 px-5 py-6 backdrop-blur-xl lg:flex">
-      <Brand />
+      <BrandWord />
 
       <nav className="mt-9 flex flex-1 flex-col gap-1.5">
         {ITEMS.map(({ id, label, Icon }) => {
