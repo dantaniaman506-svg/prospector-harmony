@@ -24,8 +24,9 @@ export function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
     setLoading(false);
     if (ok) {
       haptic.success();
-      window.localStorage.setItem("airleads-session", remember ? "persist" : "session");
+      writeSession(remember);
       onSuccess();
+
     } else {
       haptic.error();
       setError("Invalid email or password");
